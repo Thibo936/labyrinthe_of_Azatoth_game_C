@@ -76,7 +76,7 @@ void initialiser_joueur() {
     joueur.salle_actuelle = 1; // Départ salle 1
     joueur.x = 5;
     joueur.y = 5;
-    joueur.cles = 3;
+    joueur.cles = 0;
     joueur.force = 0;
     joueur.defense = 0;
 }

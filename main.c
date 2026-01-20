@@ -76,7 +76,7 @@ void initialize_player() {
     player.current_room = 1; // Start in room 1
     player.x = 5;
     player.y = 5;
-    player.keys = 3;
+    player.keys = 0;
     player.strength = 0;
     player.defense = 0;
 }
