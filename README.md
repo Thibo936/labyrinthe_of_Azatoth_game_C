@@ -1,4 +1,3 @@
-Thibaut Castillo L2A
 
 # Projet Labyrinthe
 
