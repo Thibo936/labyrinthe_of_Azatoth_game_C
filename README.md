@@ -1,7 +1,6 @@
 Thibaut Castillo L2A
 
 # Projet Labyrinthe
-
 ## Description du Projet
 
 Jeu d'aventure en C dans lequel un chevalier doit explorer un labyrinthe composé de 13 salles interconnectées pour trouver et vaincre le boss final : Azatoth.

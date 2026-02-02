@@ -46,6 +46,7 @@ void afficher_statut();
 void initialiser_joueur();
 void initialiser_plan();
 void charger_plan(const char* nom_fichier);
+void generer_donjon_aleatoire();
 int char_to_dir(char c);
 void sauvegarder_partie(const char* nom_fichier);
 int charger_sauvegarde(const char* nom_fichier);
@@ -76,7 +77,7 @@ void initialiser_joueur() {
     joueur.salle_actuelle = 1; // Départ salle 1
     joueur.x = 5;
     joueur.y = 5;
-    joueur.cles = 3;
+    joueur.cles = 0;
     joueur.force = 0;
     joueur.defense = 0;
 }
@@ -501,25 +502,116 @@ int charger_sauvegarde(const char* nom_fichier) {
     return 1;
 }
 
+void generer_donjon_aleatoire() {
+    printf("Génération du donjon aléatoire...\n");
+    initialiser_plan();
+    
+    int visited[MAX_SALLES];
+    for(int i=0; i<MAX_SALLES; i++) visited[i] = 0;
+    
+    // On commence salle 1
+    int current_rooms = 0;
+    int start_room = 1;
+    visited[start_room] = 1;
+    current_rooms++;
+    
+    // On veut connecter entre 8 et MAX_SALLES-1 salles
+    int target_rooms = 8 + (rand() % (MAX_SALLES - 9)); 
+    
+    while (current_rooms < target_rooms) {
+        // Choisir une salle déjà visitée au hasard
+        int r1 = -1;
+        do {
+            r1 = rand() % MAX_SALLES;
+        } while (!visited[r1]);
+        
+        // Choisir une direction au hasard
+        int dir = rand() % 4; // 0-3
+        
+        // Si la porte est libre
+        if (plan[r1].portes[dir] == -1) {
+            // Trouver une salle non visitée
+            int r2 = -1;
+            // On cherche une salle libre
+            for (int k = 1; k < MAX_SALLES; k++) {
+                if (!visited[k]) {
+                    r2 = k;
+                    break;
+                }
+            }
+            
+            if (r2 != -1) {
+                // Connexion
+                int opp = (dir + 2) % 4;
+                plan[r1].portes[dir] = r2;
+                plan[r2].portes[opp] = r1;
+                
+                visited[r2] = 1;
+                current_rooms++;
+                
+                // Générer contenu
+                generer_contenu_salle(r1);
+                generer_contenu_salle(r2);
+                
+                // Chance de verrouiller (10%)
+                if (rand() % 10 == 0) {
+                    plan[r1].portes_verrouillees[dir] = 1;
+                    plan[r2].portes_verrouillees[opp] = 1;
+                }
+            }
+        }
+    }
+    
+    // Placer Azatoth dans la dernière salle ajoutée ou une salle lointaine
+    // Pour simplifier, on prend une salle visitée au hasard qui n'est pas la 1
+    int boss_room = -1;
+    while (boss_room == -1 || boss_room == 1) {
+        int r = rand() % MAX_SALLES;
+        if (visited[r]) boss_room = r;
+    }
+    
+    // Nettoyer la salle du boss
+    plan[boss_room].a_ennemi = 0;
+    plan[boss_room].a_tresor = 0;
+    plan[boss_room].a_azatoth = 1;
+    generer_contenu_salle(boss_room); // Replacer le boss correctement
+    
+    printf("Donjon généré ! %d salles connectées. Boss en salle %d.\n", current_rooms, boss_room);
+}
+
 int main() {
     srand(time(NULL));
     
     // Initialisation
     initialiser_plan();
-    charger_plan("plan.pln");
     initialiser_joueur();
     
     printf("Bienvenue Chevalier. Trouvez Azatoth !\n");
     printf("Charger une sauvegarde ? (O/N) : ");
     char choix;
     scanf(" %c", &choix);
+    int partie_chargee = 0;
+    
     if (choix == 'O' || choix == 'o') {
         if (charger_sauvegarde("sauvegarde.sav")) {
             printf("Sauvegarde chargee !\n");
+            partie_chargee = 1;
         } else {
-            printf("Aucune sauvegarde trouvee, nouvelle partie.\n");
+            printf("Aucune sauvegarde trouvee.\n");
         }
     }
+    
+    if (!partie_chargee) {
+        printf("Voulez-vous un donjon aléatoire ? (O/N) : ");
+        char choix_donjon;
+        scanf(" %c", &choix_donjon);
+        if (choix_donjon == 'O' || choix_donjon == 'o') {
+            generer_donjon_aleatoire();
+        } else {
+            charger_plan("plan_base.pln");
+        }
+    }
+
     printf("Appuyez sur Entree pour commencer...");
     getchar(); getchar();
 

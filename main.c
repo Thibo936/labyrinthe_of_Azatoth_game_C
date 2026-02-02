@@ -46,8 +46,7 @@ void display_status();
 void initialize_player();
 void initialize_map();
 void load_map(const char* filename);
-int char_to_dir(char c);
-void save_game(const char* filename);
+int char_to_dir(char c);void generate_random_dungeon();void save_game(const char* filename);
 int load_save(const char* filename);
 
 // Initializes the room map
@@ -76,7 +75,7 @@ void initialize_player() {
     player.current_room = 1; // Start in room 1
     player.x = 5;
     player.y = 5;
-    player.keys = 3;
+    player.keys = 0;
     player.strength = 0;
     player.defense = 0;
 }
@@ -500,25 +499,116 @@ int load_save(const char* filename) {
     return 1;
 }
 
+void generate_random_dungeon() {
+    printf("Generating random dungeon...\n");
+    initialize_map();
+    
+    int visited[MAX_ROOMS];
+    for(int i=0; i<MAX_ROOMS; i++) visited[i] = 0;
+    
+    // Start at room 1
+    int current_rooms = 0;
+    int start_room = 1;
+    visited[start_room] = 1;
+    current_rooms++;
+    
+    // Connect between 8 and MAX_ROOMS-1 rooms
+    int target_rooms = 8 + (rand() % (MAX_ROOMS - 9)); 
+    
+    while (current_rooms < target_rooms) {
+        // Choose an already visited room at random
+        int r1 = -1;
+        do {
+            r1 = rand() % MAX_ROOMS;
+        } while (!visited[r1]);
+        
+        // Choose a random direction
+        int dir = rand() % 4; // 0-3
+        
+        // If the door is free
+        if (map[r1].doors[dir] == -1) {
+            // Find an unvisited room
+            int r2 = -1;
+            // Search for a free room
+            for (int k = 1; k < MAX_ROOMS; k++) {
+                if (!visited[k]) {
+                    r2 = k;
+                    break;
+                }
+            }
+            
+            if (r2 != -1) {
+                // Connection
+                int opp = (dir + 2) % 4;
+                map[r1].doors[dir] = r2;
+                map[r2].doors[opp] = r1;
+                
+                visited[r2] = 1;
+                current_rooms++;
+                
+                // Generate content
+                generate_room_content(r1);
+                generate_room_content(r2);
+                
+                // Chance to lock (10%)
+                if (rand() % 10 == 0) {
+                    map[r1].locked_doors[dir] = 1;
+                    map[r2].locked_doors[opp] = 1;
+                }
+            }
+        }
+    }
+    
+    // Place Azatoth in the last added room or a distant room
+    // To simplify, take a random visited room that is not 1
+    int boss_room = -1;
+    while (boss_room == -1 || boss_room == 1) {
+        int r = rand() % MAX_ROOMS;
+        if (visited[r]) boss_room = r;
+    }
+    
+    // Clean boss room
+    map[boss_room].has_enemy = 0;
+    map[boss_room].has_treasure = 0;
+    map[boss_room].has_azatoth = 1;
+    generate_room_content(boss_room); // Re-place boss correctly
+    
+    printf("Dungeon generated! %d rooms connected. Boss in room %d.\n", current_rooms, boss_room);
+}
+
 int main() {
     srand(time(NULL));
     
     // Initialization
     initialize_map();
-    load_map("plan.pln");
     initialize_player();
     
     printf("Welcome, Knight. Find Azatoth!\n");
     printf("Load a save game? (Y/N): ");
     char choice;
     scanf(" %c", &choice);
+    int game_loaded = 0;
+    
     if (choice == 'Y' || choice == 'y' || choice == 'O' || choice == 'o') {
         if (load_save("save.sav")) {
             printf("Save loaded!\n");
+            game_loaded = 1;
         } else {
-            printf("No save found, starting new game.\n");
+            printf("No save found.\n");
         }
     }
+    
+    if (!game_loaded) {
+        printf("Do you want a random dungeon? (Y/N): ");
+        char dungeon_choice;
+        scanf(" %c", &dungeon_choice);
+        if (dungeon_choice == 'Y' || dungeon_choice == 'y' || dungeon_choice == 'O' || dungeon_choice == 'o') {
+            generate_random_dungeon();
+        } else {
+            load_map("plan_base.pln");
+        }
+    }
+
     printf("Press Enter to start...");
     getchar(); getchar();
 
